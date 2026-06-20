@@ -1,0 +1,28 @@
+name: expire-feedback
+on:
+  schedule:
+    - cron: '5 15 * * *'   # 毎日 00:05 JST
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  expire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove pages after expiry (JST)
+        run: |
+          EXPIRE="2026-07-03"
+          TODAY=$(TZ=Asia/Tokyo date +%F)
+          echo "today(JST)=$TODAY expire=$EXPIRE"
+          if [[ ! "$TODAY" < "$EXPIRE" ]]; then
+            echo "期限到達: コンテンツを削除します"
+            git config user.name "expire-bot"
+            git config user.email "actions@users.noreply.github.com"
+            rm -f k3.html k4.html g3.html g4.html
+            printf '%s' '<!DOCTYPE html><meta charset="UTF-8"><body style="font-family:sans-serif;text-align:center;padding:40px;color:#555">この課題フィードバックの公開期間は終了しました。</body>' > index.html
+            git add -A
+            git commit -m "Auto-expire feedback pages ($TODAY)" && git push || echo "no change"
+          else
+            echo "まだ期限前。何もしません。"
+          fi
